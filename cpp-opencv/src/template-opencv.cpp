@@ -91,8 +91,8 @@ int32_t main(int32_t argc, char **argv) {
                 cv::rectangle(img, cv::Point(50, 50), cv::Point(100, 100), cv::Scalar(0,0,255));
 
                 // If you want to access the latest received ground steering, don't forget to lock the mutex:
-                std::lock_guard<std::mutex> lck(gsrMutex);
                 {
+                    std::lock_guard<std::mutex> lck(gsrMutex);
                     std::cout << "main: groundSteering = " << gsr.groundSteering() << std::endl;
                 }
 
