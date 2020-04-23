@@ -56,6 +56,18 @@ int32_t main(int32_t argc, char **argv) {
             // The instance od4 allows you to send and receive messages.
             cluon::OD4Session od4{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
 
+            opendlv::proxy::GroundSteeringRequest gsr;
+            std::mutex gsrMutex;
+            auto onGroundSteeringRequest = [&gsr, &gsrMutex](cluon::data::Envelope &&env){
+                // The envelope data structure provide further details, such as sampleTimePoint as shown in this test case:
+                // https://github.com/chrberger/libcluon/blob/master/libcluon/testsuites/TestEnvelopeConverter.cpp#L31-L40
+                std::lock_guard<std::mutex> lck(gsrMutex);
+                gsr = cluon::extractMessage<opendlv::proxy::GroundSteeringRequest>(std::move(env));
+                std::cout << "lambda: groundSteering = " << gsr.groundSteering() << std::endl;
+            };
+
+            od4.dataTrigger(opendlv::proxy::GroundSteeringRequest::ID(), onGroundSteeringRequest);
+
             // Endless loop; end the program by pressing Ctrl-C.
             while (od4.isRunning()) {
                 // OpenCV data structure to hold an image.
@@ -77,6 +89,12 @@ int32_t main(int32_t argc, char **argv) {
                 // TODO: Do something with the frame.
                 // Example: Draw a red rectangle and display image.
                 cv::rectangle(img, cv::Point(50, 50), cv::Point(100, 100), cv::Scalar(0,0,255));
+
+                // If you want to access the latest received ground steering, don't forget to lock the mutex:
+                std::lock_guard<std::mutex> lck(gsrMutex);
+                {
+                    std::cout << "main: groundSteering = " << gsr.groundSteering() << std::endl;
+                }
 
                 // Display image on your screen.
                 if (VERBOSE) {
